@@ -1,0 +1,7 @@
+SECRET_KEY = 'xxxxx'
+
+SESSION_AGE = '3600' # in seconds
+
+MAIL_USER = 'xxxxxx@gmail.com'
+
+MAIL_PASS = 'xxxxxx'

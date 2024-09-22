@@ -1,0 +1,10 @@
+Django
+django-cors-headers
+djangorestframework
+gunicorn
+uvicorn
+requests
+python-dotenv
+mysqlclient
+django-filter
+django-allauth 
