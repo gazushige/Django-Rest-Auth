@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from dotenv import dotenv_values
 
@@ -11,8 +10,21 @@ CONFIG = dotenv_values(".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = CONFIG['SECRET_KEY']
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def ConvertBool(value:str):
+    if value == "True":
+        return True
+    else: 
+        return False
+
+DEBUG:bool = ConvertBool(CONFIG['IS_DEBUG'])
+IS_MYSQL:bool = ConvertBool(CONFIG['IS_MYSQL'])
+IS_MAIL:bool = ConvertBool(CONFIG['IS_MAIL'])
+IS_LOGGING:bool= ConvertBool(CONFIG['IS_LOGGING'])
+
+FRONTEND_URL=CONFIG['FRONTEND_URL']
+BACKEND_URL=CONFIG['BACKEND_URL']
 
 ALLOWED_HOSTS = ["*"]
 
@@ -56,6 +68,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -67,11 +80,13 @@ REST_FRAMEWORK = {
     ],
 }
 
-CSRF_COOKIE_SECURE = True  # HTTPSを使用している場合
+# CSRF_COOKIE_SECURE = True  # HTTPSを使用している場合
+CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']  # 必要に応じて調整
 
-SESSION_COOKIE_SECURE = True  # HTTPSを使用している場合
+# SESSION_COOKIE_SECURE = True  # HTTPSを使用している場合
+SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = int(CONFIG['SESSION_AGE']) #3600秒(1時間)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -84,12 +99,17 @@ ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 SITE_ID = 1
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = CONFIG['MAIL_USER']
-EMAIL_HOST_PASSWORD = CONFIG['MAIL_PASS']
+
+if IS_MAIL:
+    # 確認メールをgmailで送信。ただし英文。翻訳は面倒なので・・・
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = CONFIG['MAIL_USER']
+    EMAIL_HOST_PASSWORD = CONFIG['MAIL_PASS']
+else:
+    # 確認メールをコンソール上で表示
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 
@@ -121,12 +141,24 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if IS_MYSQL:
+    DATABASES = {
+        'default': {
+            'ENGINE': CONFIG['ENGINE'],
+            'NAME': CONFIG['NAME'],
+            'USER': CONFIG['USER'],
+            'PASSWORD': CONFIG['PASSWORD'],
+            'HOST': CONFIG['HOST'],
+            'PORT': CONFIG['PORT'],
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
@@ -170,3 +202,28 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+if IS_LOGGING:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
+            'file': {
+                'class': 'logging.FileHandler',
+                'filename': 'debug.log',
+            },
+        },
+        'loggers': {
+            '': {  # ルートロガー
+                'handlers': ['console', 'file'],
+                'level': 'DEBUG',
+            },
+            'django': {
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
+            },
+        },
+    }

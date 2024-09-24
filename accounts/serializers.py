@@ -2,8 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
+from django.contrib.auth.password_validation import validate_password
 import uuid
-from django.utils import timezone
+# from django.utils import timezone
 
 User = get_user_model()
 
@@ -63,3 +64,41 @@ class LoginSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class DeleteAccountSerializer(serializers.Serializer):
+    password = serializers.CharField(style={'input_type': 'password'})
+class ReactivateAccountSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    admin_id = serializers.CharField()
+    admin_password = serializers.CharField(style={'input_type': 'password'})
+    def validate_email(self, value):
+        user = get_user_model().objects.filter(email=value).first()
+        if not user:
+            raise serializers.ValidationError('User does not exist')
+        return value
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(style={'input_type': 'password'}, required=True)
+    new_password = serializers.CharField(style={'input_type': 'password'}, required=True)
+    confirm_password = serializers.CharField(style={'input_type': 'password'}, required=True)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "新しいパスワードと確認用パスワードが一致しません。"})
+        return data
+class CompletelyDeleteAccountSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("The two password fields didn't match.")
+        validate_password(data['new_password'])
+        return data
